@@ -12,7 +12,6 @@ from graphql.execution.base import ResolveInfo
 from rx import Observable
 
 from dagster import RunConfig, check
-from dagster.core.definitions.pipeline import ExecutionSelector
 from dagster.core.events import DagsterEventType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.config import EXECUTION_TIME_KEY
@@ -20,14 +19,17 @@ from dagster.core.execution.memoization import get_retry_steps_from_execution_pl
 from dagster.core.serdes import serialize_dagster_namedtuple
 from dagster.core.storage.compute_log_manager import ComputeIOType
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
-from dagster.utils import merge_dicts
 
 from .fetch_pipelines import (
     get_dauphin_pipeline_from_selector_or_raise,
     get_dauphin_pipeline_reference_from_selector,
 )
 from .fetch_runs import get_validated_config
-from .fetch_schedules import get_dagster_schedule, get_dagster_schedule_def
+from .fetch_schedules import (
+    execution_params_for_schedule,
+    get_dagster_schedule,
+    get_dagster_schedule_def,
+)
 from .pipeline_run_storage import PipelineRunObservableSubscribe
 from .utils import ExecutionParams, UserFacingGraphQLError, capture_dauphin_error
 
@@ -75,8 +77,6 @@ def delete_pipeline_run(graphene_info, run_id):
 
 @capture_dauphin_error
 def start_scheduled_execution(graphene_info, schedule_name):
-    from dagster_graphql.schema.roots import create_execution_metadata
-
     check.inst_param(graphene_info, 'graphene_info', ResolveInfo)
     check.str_param(schedule_name, 'schedule_name')
 
@@ -91,41 +91,7 @@ def start_scheduled_execution(graphene_info, schedule_name):
             ' True'.format(schedule_name=schedule_name)
         )
 
-    # Get environment_dict
-    if schedule_def.environment_dict:
-        environment_dict = schedule_def.environment_dict
-    else:
-        environment_dict = schedule_def.environment_dict_fn()
-
-    # Get tags
-    if schedule_def.tags:
-        tags = schedule_def.tags
-    else:
-        tags = schedule_def.tags_fn()
-
-    check.invariant('dagster/schedule_id' not in tags)
-    tags['dagster/schedule_id'] = schedule.schedule_id
-
-    check.invariant('dagster/schedule_name' not in tags)
-    tags['dagster/schedule_name'] = schedule_def.name
-
-    execution_metadata_tags = [{'key': key, 'value': value} for key, value in tags.items()]
-    execution_params = merge_dicts(
-        schedule_def.execution_params, {'executionMetadata': {'tags': execution_metadata_tags}}
-    )
-
-    selector = ExecutionSelector(
-        execution_params['selector']['name'], execution_params['selector'].get('solidSubset')
-    )
-
-    execution_params = ExecutionParams(
-        selector=selector,
-        environment_dict=environment_dict,
-        mode=execution_params.get('mode'),
-        execution_metadata=create_execution_metadata(execution_params.get('executionMetadata')),
-        step_keys=execution_params.get('stepKeys'),
-        previous_run_id=None,
-    )
+    execution_params = execution_params_for_schedule(schedule_def=schedule_def, schedule=schedule,)
 
     return start_pipeline_execution(graphene_info, execution_params)
 

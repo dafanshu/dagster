@@ -5,7 +5,7 @@ from graphql.execution.base import ResolveInfo
 
 from dagster import check
 
-from .utils import UserFacingGraphQLError, capture_dauphin_error
+from .utils import ExecutionMetadata, ExecutionParams, UserFacingGraphQLError, capture_dauphin_error
 
 
 @capture_dauphin_error
@@ -33,6 +33,39 @@ def get_schedule_or_error(graphene_info, schedule_name):
         )
 
     return graphene_info.schema.type_named('RunningSchedule')(graphene_info, schedule=schedule)
+
+
+def execution_params_for_schedule(schedule_def, schedule=None):
+    # Get environment_dict
+    if schedule_def.environment_dict:
+        environment_dict = schedule_def.environment_dict
+    else:
+        environment_dict = schedule_def.environment_dict_fn()
+
+    # Get tags
+    if schedule_def.tags:
+        tags = schedule_def.tags
+    else:
+        tags = schedule_def.tags_fn()
+
+    if schedule:
+        check.invariant('dagster/schedule_id' not in tags)
+        tags['dagster/schedule_id'] = schedule.schedule_id
+
+    check.invariant('dagster/schedule_name' not in tags)
+    tags['dagster/schedule_name'] = schedule_def.name
+
+    selector = schedule_def.selector
+    mode = schedule_def.mode
+
+    return ExecutionParams(
+        selector=selector,
+        environment_dict=environment_dict,
+        mode=mode,
+        execution_metadata=ExecutionMetadata(tags=tags, run_id=None),
+        step_keys=None,
+        previous_run_id=None,
+    )
 
 
 def get_scheduler_handle(graphene_info):

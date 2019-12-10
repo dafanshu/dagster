@@ -5,6 +5,7 @@ import os
 import yaml
 from dagster_graphql import dauphin
 from dagster_graphql.implementation.fetch_schedules import (
+    execution_params_for_schedule,
     get_dagster_schedule_def,
     get_schedule_attempt_filenames,
 )
@@ -58,14 +59,12 @@ class DauphinScheduleDefinition(dauphin.ObjectType):
     def __init__(self, schedule_def):
         self._schedule_def = check.inst_param(schedule_def, 'schedule_def', ScheduleDefinition)
 
-        execution_params = schedule_def.execution_params
-        environment_config = schedule_def.environment_dict or schedule_def.environment_dict_fn()
-        execution_params['environmentConfigData'] = environment_config
+        execution_params = execution_params_for_schedule(schedule_def=schedule_def)
 
         super(DauphinScheduleDefinition, self).__init__(
             name=schedule_def.name,
             cron_schedule=schedule_def.cron_schedule,
-            execution_params_string=seven.json.dumps(execution_params),
+            execution_params_string=seven.json.dumps(execution_params.to_graphql_input()),
         )
 
 

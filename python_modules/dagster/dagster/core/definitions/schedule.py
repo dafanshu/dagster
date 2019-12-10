@@ -1,6 +1,7 @@
 from collections import namedtuple
 
 from dagster import check
+from dagster.core.definitions.pipeline import ExecutionSelector
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.serdes import whitelist_for_serdes
 
@@ -51,6 +52,8 @@ class ScheduleDefinition(object):
         '_environment_dict_fn',
         '_environment_dict',
         '_tags',
+        '_mode',
+        '_selector',
         '_tags_fn',
         '_should_execute',
     ]
@@ -110,12 +113,8 @@ class ScheduleDefinition(object):
         self._tags = tags
         self._tags_fn = tags_fn
         self._should_execute = should_execute
-        self._execution_params = {
-            'environmentConfigData': {},
-            'selector': {'name': pipeline_name},
-            'executionMetadata': {"tags": []},
-            'mode': mode,
-        }
+        self._mode = mode
+        self._selector = ExecutionSelector(pipeline_name)
 
     @property
     def schedule_definition_data(self):
@@ -134,10 +133,6 @@ class ScheduleDefinition(object):
         return self._schedule_definition_data.environment_vars
 
     @property
-    def execution_params(self):
-        return self._execution_params
-
-    @property
     def environment_dict(self):
         return self._environment_dict
 
@@ -152,6 +147,14 @@ class ScheduleDefinition(object):
     @property
     def tags_fn(self):
         return self._tags_fn
+
+    @property
+    def selector(self):
+        return self._selector
+
+    @property
+    def mode(self):
+        return self._mode
 
     @property
     def should_execute(self):
