@@ -1,6 +1,7 @@
 import pandas as pd
-from dagster_pandas.constraints import ConstraintViolationException
-from dagster_pandas.validation import validate_collection_schema
+from dagster_pandas.constraints import ConstraintViolationException, Constraint, ColumnTypeConstraint, \
+    ColumnExistsConstraint
+from dagster_pandas.validation import validate_collection_schema, PandasColumn
 
 from dagster import (
     DagsterInvariantViolationError,
@@ -17,6 +18,13 @@ from dagster import (
 from dagster.core.types.config.field_utils import NamedSelector
 from dagster.core.types.runtime.config_schema import input_selector_schema, output_selector_schema
 
+
+CONSTRAINT_BLACKLIST = {
+    ColumnExistsConstraint,
+    ColumnTypeConstraint
+}
+
+NEW_LINE = '\n\n'
 
 def dict_without_keys(ddict, *keys):
     return {key: value for key, value in ddict.items() if key not in set(keys)}
@@ -102,7 +110,48 @@ DataFrame = as_dagster_type(
 )
 
 
-def create_dagster_pandas_dataframe_type(name=None, columns=None, summary_statistics=None):
+def construct_constraint_list(constraints):
+    def add_bullet(constraint_list, constraint_name, constraint_description):
+        return constraint_list+"\n"+"+ {constraint_description}".format(constraint_name=constraint_name, constraint_description=constraint_description)
+
+    constraint_list = ""
+    for constraint in constraints:
+        if constraint.__class__ not in CONSTRAINT_BLACKLIST:
+            constraint_list = add_bullet(constraint_list, constraint.name, constraint.description)
+    return constraint_list
+
+
+def _get_expected_column_types(constraints):
+    column_type_constraint = [
+        constraint for constraint in constraints
+        if isinstance(constraint, ColumnTypeConstraint)
+    ]
+    if column_type_constraint:
+        # TODO: You could have more than one type constraint technically but let's ignore that.
+        expected_types = column_type_constraint[0].expected_pandas_dtypes
+        if expected_types:
+            return list(expected_types)[0] if len(expected_types) == 1 else expected_types
+    return 'Any'
+
+
+def create_dagster_pandas_dataframe_description(description, columns):
+    description = check.opt_str_param(description, 'description', default='')
+    columns = check.opt_list_param(columns, 'columns', of_type=PandasColumn)
+
+    buildme = description + NEW_LINE + '## DataFrame Schema' + NEW_LINE
+
+
+    for column in columns:
+        expected_column_types = _get_expected_column_types(column.constraints)
+
+        column_header_string = "### *{column_name}*: `{expected_types}`\n\n".format(column_name=column.name, expected_types=expected_column_types)
+        buildme = buildme + column_header_string + construct_constraint_list(column.constraints) + "\n\n"
+    return buildme
+
+
+def create_dagster_pandas_dataframe_type(
+    name=None, description=None, columns=None, summary_statistics=None
+):
     summary_statistics = check.opt_callable_param(summary_statistics, 'summary_statistics')
 
     def _dagster_type_check(value):
@@ -129,7 +178,7 @@ def create_dagster_pandas_dataframe_type(name=None, columns=None, summary_statis
 
     # add input_hydration_confign and output_materialization_config
     # https://github.com/dagster-io/dagster/issues/2027
-    return RuntimeType(name=name, key=name, type_check_fn=_dagster_type_check,)
+    return RuntimeType(name=name, key=name, type_check_fn=_dagster_type_check, description=description)
 
 
 def _execute_summary_stats(type_name, value, summary_statistics_fn):

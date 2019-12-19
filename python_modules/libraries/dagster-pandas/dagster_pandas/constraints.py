@@ -79,7 +79,7 @@ class ColumnTypeConstraint(Constraint):
 
 class NonNullableColumnConstraint(Constraint):
     def __init__(self):
-        super(NonNullableColumnConstraint, self).__init__("Column must contain non null values")
+        super(NonNullableColumnConstraint, self).__init__("No Null values allowed.")
 
     def validate(self, dataframe, column_name):
         rows_with_null_columns = dataframe[dataframe[column_name].isna()]
@@ -94,7 +94,7 @@ class NonNullableColumnConstraint(Constraint):
 
 class UniqueColumnConstraint(Constraint):
     def __init__(self):
-        super(UniqueColumnConstraint, self).__init__("Column must contain unique values")
+        super(UniqueColumnConstraint, self).__init__("Column must be unique.")
 
     def validate(self, dataframe, column_name):
         rows_with_duplicated_values = dataframe[dataframe[column_name].duplicated()]
@@ -111,7 +111,7 @@ class CategoricalColumnConstraint(Constraint):
     def __init__(self, categories):
         self.categories = check.set_param(categories, 'categories', of_type=str)
         super(CategoricalColumnConstraint, self).__init__(
-            "Column must take the following values {}".format(self.categories)
+            "Expected Categories are {}".format(self.categories)
         )
 
     def validate(self, dataframe, column_name):
@@ -129,7 +129,7 @@ class MinValueColumnConstraint(Constraint):
     def __init__(self, min_value):
         self.min_value = min_value
         super(MinValueColumnConstraint, self).__init__(
-            "Column must have values greater than {}".format(self.min_value)
+            "**val** > {}".format(self.min_value)
         )
 
     def validate(self, dataframe, column_name):
@@ -147,7 +147,7 @@ class MaxValueColumnConstraint(Constraint):
     def __init__(self, max_value):
         self.max_value = max_value
         super(MaxValueColumnConstraint, self).__init__(
-            "Column must have values greater than {}".format(self.max_value)
+            "**val** < {}".format(self.max_value)
         )
 
     def validate(self, dataframe, column_name):
@@ -166,7 +166,7 @@ class InRangeColumnConstraint(Constraint):
         self.min_value = min_value
         self.max_value = max_value
         super(InRangeColumnConstraint, self).__init__(
-            "Column must have values between {} and {}".format(self.min_value, self.max_value)
+            "{} < **val** < {}".format(self.min_value, self.max_value)
         )
 
     def validate(self, dataframe, column_name):
