@@ -46,8 +46,7 @@ class ColumnExistsConstraint(Constraint):
     def __init__(self):
         description = "Column Name must exist in dataframe"
         super(ColumnExistsConstraint, self).__init__(
-            error_description=description,
-            markdown_description=description,
+            error_description=description, markdown_description=description,
         )
 
     def validate(self, dataframe, column_name):
@@ -71,8 +70,7 @@ class ColumnTypeConstraint(Constraint):
         )
         description = "Column dtype must be {}".format(self.expected_pandas_dtypes)
         super(ColumnTypeConstraint, self).__init__(
-            error_description=description,
-            markdown_description=description,
+            error_description=description, markdown_description=description,
         )
 
     def validate(self, dataframe, column_name):
@@ -87,7 +85,9 @@ class ColumnTypeConstraint(Constraint):
 class NonNullableColumnConstraint(Constraint):
     def __init__(self):
         description = "No Null values allowed."
-        super(NonNullableColumnConstraint, self).__init__(error_description=description, markdown_description=description)
+        super(NonNullableColumnConstraint, self).__init__(
+            error_description=description, markdown_description=description
+        )
 
     def validate(self, dataframe, column_name):
         rows_with_null_columns = dataframe[dataframe[column_name].isna()]
@@ -103,7 +103,9 @@ class NonNullableColumnConstraint(Constraint):
 class UniqueColumnConstraint(Constraint):
     def __init__(self):
         description = "Column must be unique."
-        super(UniqueColumnConstraint, self).__init__(error_description=description, markdown_description=description)
+        super(UniqueColumnConstraint, self).__init__(
+            error_description=description, markdown_description=description
+        )
 
     def validate(self, dataframe, column_name):
         rows_with_duplicated_values = dataframe[dataframe[column_name].duplicated()]
