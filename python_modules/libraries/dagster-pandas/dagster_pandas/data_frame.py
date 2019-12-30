@@ -115,17 +115,13 @@ def _construct_constraint_list(constraints):
         return (
             constraint_list
             + "\n"
-            + "+ {constraint_description}".format(
-                constraint_description=constraint_description
-            )
+            + "+ {constraint_description}".format(constraint_description=constraint_description)
         )
 
     constraint_list = ""
     for constraint in constraints:
         if constraint.__class__ not in CONSTRAINT_BLACKLIST:
-            constraint_list = add_bullet(
-                constraint_list, constraint.markdown_description
-            )
+            constraint_list = add_bullet(constraint_list, constraint.markdown_description)
     return constraint_list
 
 
