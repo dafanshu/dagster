@@ -1,6 +1,10 @@
 import pandas as pd
-from dagster_pandas.constraints import ConstraintViolationException, Constraint, ColumnTypeConstraint, \
-    ColumnExistsConstraint
+from dagster_pandas.constraints import (
+    ConstraintViolationException,
+    Constraint,
+    ColumnTypeConstraint,
+    ColumnExistsConstraint,
+)
 from dagster_pandas.validation import validate_collection_schema, PandasColumn
 
 from dagster import (
@@ -19,12 +23,10 @@ from dagster.core.types.config.field_utils import NamedSelector
 from dagster.core.types.runtime.config_schema import input_selector_schema, output_selector_schema
 
 
-CONSTRAINT_BLACKLIST = {
-    ColumnExistsConstraint,
-    ColumnTypeConstraint
-}
+CONSTRAINT_BLACKLIST = {ColumnExistsConstraint, ColumnTypeConstraint}
 
 NEW_LINE = '\n\n'
+
 
 def dict_without_keys(ddict, *keys):
     return {key: value for key, value in ddict.items() if key not in set(keys)}
@@ -112,40 +114,51 @@ DataFrame = as_dagster_type(
 
 def construct_constraint_list(constraints):
     def add_bullet(constraint_list, constraint_name, constraint_description):
-        return constraint_list+"\n"+"+ {constraint_description}".format(constraint_name=constraint_name, constraint_description=constraint_description)
+        return (
+            constraint_list
+            + "\n"
+            + "+ {constraint_description}".format(
+                constraint_name=constraint_name, constraint_description=constraint_description
+            )
+        )
 
     constraint_list = ""
     for constraint in constraints:
         if constraint.__class__ not in CONSTRAINT_BLACKLIST:
-            constraint_list = add_bullet(constraint_list, constraint.name, constraint.description)
+            constraint_list = add_bullet(
+                constraint_list, constraint.name, constraint.markdown_description
+            )
     return constraint_list
 
 
-def _get_expected_column_types(constraints):
+def _build_column_header(column_name, constraints):
+    expected_column_types = None
     column_type_constraint = [
-        constraint for constraint in constraints
-        if isinstance(constraint, ColumnTypeConstraint)
+        constraint for constraint in constraints if isinstance(constraint, ColumnTypeConstraint)
     ]
     if column_type_constraint:
-        # TODO: You could have more than one type constraint technically but let's ignore that.
-        expected_types = column_type_constraint[0].expected_pandas_dtypes
+        expected_types = tuple(column_type_constraint[0].expected_pandas_dtypes)
         if expected_types:
-            return list(expected_types)[0] if len(expected_types) == 1 else expected_types
-    return 'Any'
+            expected_column_types = expected_types[0] if len(expected_types) == 1 else tuple(expected_types)
+
+    column_header = '### *{column_name}*'.format(column_name=column_name)
+    if expected_column_types:
+        column_header += ": `{expected_dtypes}`".format(expected_dtypes=expected_column_types)
+    return column_header
 
 
 def create_dagster_pandas_dataframe_description(description, columns):
     description = check.opt_str_param(description, 'description', default='')
     columns = check.opt_list_param(columns, 'columns', of_type=PandasColumn)
 
-    buildme = description + NEW_LINE + '## DataFrame Schema' + NEW_LINE
-
-
+    title = NEW_LINE.join([description, '## DataFrame Schema', ''])
+    buildme = title
     for column in columns:
-        expected_column_types = _get_expected_column_types(column.constraints)
-
-        column_header_string = "### *{column_name}*: `{expected_types}`\n\n".format(column_name=column.name, expected_types=expected_column_types)
-        buildme = buildme + column_header_string + construct_constraint_list(column.constraints) + "\n\n"
+        buildme += NEW_LINE.join([
+            _build_column_header(column.name, column.constraints),
+            construct_constraint_list(column.constraints),
+            '',
+        ])
     return buildme
 
 
