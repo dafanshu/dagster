@@ -112,9 +112,8 @@ DataFrame = as_dagster_type(
 
 def _construct_constraint_list(constraints):
     def add_bullet(constraint_list, constraint_description):
-        return (
-            constraint_list
-            + "+ {constraint_description}\n".format(constraint_description=constraint_description)
+        return constraint_list + "+ {constraint_description}\n".format(
+            constraint_description=constraint_description
         )
 
     constraint_list = ""
@@ -146,7 +145,10 @@ def create_dagster_pandas_dataframe_description(description, columns):
     title = NEW_LINE.join([description, '### Columns', ''])
     buildme = title
     for column in columns:
-        buildme += "{}\n{}\n".format(_build_column_header(column.name, column.constraints), _construct_constraint_list(column.constraints))
+        buildme += "{}\n{}\n".format(
+            _build_column_header(column.name, column.constraints),
+            _construct_constraint_list(column.constraints),
+        )
     return buildme
 
 
