@@ -85,14 +85,14 @@ def test_dataframe_description_generation_just_type_constraint():
         name='TestDataFrame',
         columns=[PandasColumn(name='foo', constraints=[ColumnTypeConstraint('int64')])],
     )
-    assert TestDataFrame.description == "\n\n## DataFrame Schema\n\n### *foo*: `int64`\n\n\n\n"
+    assert TestDataFrame.description == "\n### Columns\n**foo**: `int64`\n\n"
 
 
 def test_dataframe_description_generation_no_type_constraint():
     TestDataFrame = create_dagster_pandas_dataframe_type(
         name='TestDataFrame', columns=[PandasColumn(name='foo')],
     )
-    assert TestDataFrame.description == "\n\n## DataFrame Schema\n\n### *foo*\n\n\n\n"
+    assert TestDataFrame.description == "\n### Columns\n**foo**\n\n"
 
 
 def test_dataframe_description_generation_multi_constraints():
@@ -111,5 +111,5 @@ def test_dataframe_description_generation_multi_constraints():
     )
     assert (
         TestDataFrame.description
-        == "\n\n## DataFrame Schema\n\n### *foo*: `int64`\n\n\n+ 0 < **val** < 100\n+ No Null values allowed.\n\n"
+        == "\n### Columns\n**foo**: `int64`\n+ 0 < values < 100\n+ No Null values allowed.\n\n"
     )

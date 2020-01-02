@@ -23,8 +23,6 @@ from dagster.core.types.runtime.config_schema import input_selector_schema, outp
 
 CONSTRAINT_BLACKLIST = {ColumnExistsConstraint, ColumnTypeConstraint}
 
-NEW_LINE = '\n'
-
 
 def dict_without_keys(ddict, *keys):
     return {key: value for key, value in ddict.items() if key not in set(keys)}
@@ -142,7 +140,7 @@ def _build_column_header(column_name, constraints):
 
 
 def create_dagster_pandas_dataframe_description(description, columns):
-    title = NEW_LINE.join([description, '### Columns', ''])
+    title = "\n".join([description, '### Columns', ''])
     buildme = title
     for column in columns:
         buildme += "{}\n{}\n".format(
