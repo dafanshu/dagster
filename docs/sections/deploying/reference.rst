@@ -40,7 +40,8 @@ multiprocess executor, add a fragment like the following to the config of any pi
 
     execution:
       multiprocess:
-        max_concurrent: 4
+        config:
+          max_concurrent: 4
     storage:
       filesystem:
 
