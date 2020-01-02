@@ -23,7 +23,7 @@ from dagster.core.types.runtime.config_schema import input_selector_schema, outp
 
 CONSTRAINT_BLACKLIST = {ColumnExistsConstraint, ColumnTypeConstraint}
 
-NEW_LINE = '\n\n'
+NEW_LINE = '\n'
 
 
 def dict_without_keys(ddict, *keys):
@@ -114,8 +114,7 @@ def _construct_constraint_list(constraints):
     def add_bullet(constraint_list, constraint_description):
         return (
             constraint_list
-            + "\n"
-            + "+ {constraint_description}".format(constraint_description=constraint_description)
+            + "+ {constraint_description}\n".format(constraint_description=constraint_description)
         )
 
     constraint_list = ""
@@ -137,23 +136,17 @@ def _build_column_header(column_name, constraints):
                 expected_types[0] if len(expected_types) == 1 else tuple(expected_types)
             )
 
-    column_header = '### *{column_name}*'.format(column_name=column_name)
+    column_header = '**{column_name}**'.format(column_name=column_name)
     if expected_column_types:
         column_header += ": `{expected_dtypes}`".format(expected_dtypes=expected_column_types)
     return column_header
 
 
 def create_dagster_pandas_dataframe_description(description, columns):
-    title = NEW_LINE.join([description, '## DataFrame Schema', ''])
+    title = NEW_LINE.join([description, '### Columns', ''])
     buildme = title
     for column in columns:
-        buildme += NEW_LINE.join(
-            [
-                _build_column_header(column.name, column.constraints),
-                _construct_constraint_list(column.constraints),
-                '',
-            ]
-        )
+        buildme += "{}\n{}\n".format(_build_column_header(column.name, column.constraints), _construct_constraint_list(column.constraints))
     return buildme
 
 

@@ -142,7 +142,7 @@ class MinValueColumnConstraint(Constraint):
     def __init__(self, min_value):
         self.min_value = min_value
         super(MinValueColumnConstraint, self).__init__(
-            markdown_description="**val** > {}".format(self.min_value),
+            markdown_description="values > {}".format(self.min_value),
             error_description="Column must have values > {}".format(self.min_value),
         )
 
@@ -161,7 +161,7 @@ class MaxValueColumnConstraint(Constraint):
     def __init__(self, max_value):
         self.max_value = max_value
         super(MaxValueColumnConstraint, self).__init__(
-            markdown_description="**val** < {}".format(self.max_value),
+            markdown_description="values < {}".format(self.max_value),
             error_description="Column must have values < {}".format(self.max_value),
         )
 
@@ -181,7 +181,7 @@ class InRangeColumnConstraint(Constraint):
         self.min_value = min_value
         self.max_value = max_value
         super(InRangeColumnConstraint, self).__init__(
-            markdown_description="{} < **val** < {}".format(self.min_value, self.max_value),
+            markdown_description="{} < values < {}".format(self.min_value, self.max_value),
             error_description="Column must have values between {} and {} inclusive.".format(
                 self.min_value, self.max_value
             ),
