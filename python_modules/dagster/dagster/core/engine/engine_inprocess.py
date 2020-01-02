@@ -333,8 +333,8 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
                 )
 
 
-def _do_type_check(runtime_type, value):
-    type_check = runtime_type.type_check(value)
+def _do_type_check(runtime_type, value, step_context):
+    type_check = runtime_type.type_check(step_context, value)
     if not isinstance(type_check, TypeCheck):
         return TypeCheck(
             success=False,
@@ -401,8 +401,11 @@ def _type_checked_event_sequence_for_input(step_context, input_name, input_value
         ),
     ):
         try:
-            type_check = _do_type_check(step_input.runtime_type, input_value)
+            type_check = _do_type_check(step_input.runtime_type, input_value, step_context)
         except Exception as exc:  # pylint: disable=broad-except
+            if step_context.raise_on_error:
+                raise exc
+
             type_check = _type_check_from_failure(exc)
 
         yield _create_step_input_event(
@@ -459,7 +462,7 @@ def _type_checked_step_output_event_sequence(step_context, output):
         ),
     ):
         try:
-            type_check = _do_type_check(step_output.runtime_type, output.value)
+            type_check = _do_type_check(step_output.runtime_type, output.value, step_context)
         except Exception as exc:  # pylint: disable=broad-except
             type_check = _type_check_from_failure(exc)
         yield _create_step_output_event(

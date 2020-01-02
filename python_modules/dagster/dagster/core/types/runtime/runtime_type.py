@@ -1,3 +1,4 @@
+import inspect
 from functools import partial
 
 import six
@@ -23,6 +24,28 @@ from dagster.core.types.wrapping.wrapping import (
 from .builtin_config_schemas import BuiltinSchemas
 from .config_schema import InputHydrationConfig, OutputMaterializationConfig
 from .marshal import PickleSerializationStrategy, SerializationStrategy
+
+if hasattr(inspect, 'signature'):
+    funcsigs = inspect
+else:
+    import funcsigs
+
+
+def _is_contextual_type_check_fn(fn, name):
+    args = list(funcsigs.signature(fn).parameters.values())
+
+    if len(args) == 1:
+        return False
+
+    if len(args) == 2:
+        # enforce context & value names?
+        return True
+
+    raise DagsterInvalidDefinitionError(
+        'type_check function on type "{name}" must take either 1 (value) or 2 (context, value) arguments - received {cnt}.'.format(
+            name=name, cnt=len(args)
+        )
+    )
 
 
 class RuntimeType(object):
@@ -58,7 +81,8 @@ class RuntimeType(object):
             PickleSerializationStrategy(),
         )
 
-        self.type_check = check.callable_param(type_check_fn, 'type_check_fn')
+        self._type_check = check.callable_param(type_check_fn, 'type_check_fn')
+        self._contextual_type_check = _is_contextual_type_check_fn(type_check_fn, name)
 
         auto_plugins = check.opt_list_param(auto_plugins, 'auto_plugins', of_type=type)
 
@@ -109,6 +133,12 @@ class RuntimeType(object):
     @property
     def is_nothing(self):
         return False
+
+    def type_check(self, context, value):
+        if self._contextual_type_check:
+            return self._type_check(context, value)
+
+        return self._type_check(value)
 
 
 class BuiltinScalarRuntimeType(RuntimeType):
@@ -451,8 +481,10 @@ class NullableType(RuntimeType):
     def display_name(self):
         return self.inner_type.display_name + '?'
 
-    def type_check_method(self, value):
-        return TypeCheck(success=True) if value is None else self.inner_type.type_check(value)
+    def type_check_method(self, context, value):
+        return (
+            TypeCheck(success=True) if value is None else self.inner_type.type_check(context, value)
+        )
 
     @property
     def is_nullable(self):
@@ -504,13 +536,13 @@ class ListType(RuntimeType):
     def display_name(self):
         return '[' + self.inner_type.display_name + ']'
 
-    def type_check_method(self, value):
+    def type_check_method(self, context, value):
         value_check = _fail_if_not_of_type(value, list, 'list')
         if not value_check.success:
             return value_check
 
         for item in value:
-            item_check = self.inner_type.type_check(item)
+            item_check = self.inner_type.type_check(context, item)
             if not item_check.success:
                 return item_check
 
