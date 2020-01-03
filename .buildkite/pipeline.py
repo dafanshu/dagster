@@ -92,7 +92,17 @@ def publish_test_images():
 
         tests.append(
             StepBuilder("test images {version}".format(version=version), key=key)
-            .run("./.buildkite/images/docker/test_project/build.sh " + base_image)
+            .run(
+                "aws ecr get-login --no-include-email --region us-west-1 | sh",
+                "export GOOGLE_APPLICATION_CREDENTIALS=\"/tmp/gcp-key-elementl-dev.json\"",
+                "export DAGSTER_DOCKER_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com/dagster-docker-buildkite:$${BUILDKITE_BUILD_ID}-"
+                + version,
+                "aws s3 cp s3://$${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json $${GOOGLE_APPLICATION_CREDENTIALS}",
+                "./.buildkite/images/docker/test_project/build.sh " + base_image,
+                "docker tag dagster-docker-buildkite $${DAGSTER_DOCKER_IMAGE}"
+                "echo -e \"--- \033[32m:docker: Pushing Docker image\033[0m\"",
+                "docker push $${DAGSTER_DOCKER_IMAGE}",
+            )
             .on_integration_image(
                 version,
                 [
